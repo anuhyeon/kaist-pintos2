@@ -2,6 +2,7 @@
 #define VM_VM_H
 #include <stdbool.h>
 #include "threads/palloc.h"
+#include "kernel/hash.h"
 
 enum vm_type {
 	/* page not initialized */
@@ -46,7 +47,9 @@ struct page {
 	struct frame *frame;   /* Back reference for frame */
 
 	/* Your implementation */
-
+	/*--------------------project 3 VM-------------------------*/
+	struct hash_elem hash_elem; // 해당 페이지가 속해 있는 해시 테이블에 연결해주는 해시 테이블 요소로서 hash_elem을 추가. key에는 page -> va 값이 들어가고, 이에 맵핑되는 value로는 페이지 구조체가 들어감.
+	bool writable;
 	/* Per-type data are binded into the union.
 	 * Each function automatically detects the current union */
 	union {
@@ -61,15 +64,19 @@ struct page {
 
 /* The representation of "frame" */
 struct frame {
-	void *kva;
+	void *kva; // Kernel Virtual Address필드는 커널 모드에서 해당 프레임의 가상 물리 주소를 나타낸다. 
 	struct page *page;
+	/*----------------project 3 VM-------------------*/
+	struct list_elem frame_elem;
 };
 
 /* The function table for page operations.
  * This is one way of implementing "interface" in C.
  * Put the table of "method" into the struct's member, and
- * call it whenever you needed. */
-struct page_operations {
+ * call it whenever you needed. 
+ *  이 구조체를 3개의 함수 포인터를 포함한 하나의 함수 테이블로 이해할 것
+ * */
+struct page_operations { 
 	bool (*swap_in) (struct page *, void *);
 	bool (*swap_out) (struct page *);
 	void (*destroy) (struct page *);
@@ -79,16 +86,18 @@ struct page_operations {
 #define swap_in(page, v) (page)->operations->swap_in ((page), v)
 #define swap_out(page) (page)->operations->swap_out (page)
 #define destroy(page) \
-	if ((page)->operations->destroy) (page)->operations->destroy (page)
+	if ((page)->operations->destroy) (page)->operations->destroy (page) // 페이지를 파괴하는 작업 수행
 
 /* Representation of current process's memory space.
  * We don't want to force you to obey any specific design for this struct.
  * All designs up to you for this. */
 struct supplemental_page_table {
+	/*-----------project 3 VM-----------*/
+	struct hash spt_hash; // 페이지 테이블의 자료구조를 해시테이블로 진행할 것이다. -> 항상 초기화 해주어야함.
 };
 
 #include "threads/thread.h"
-void supplemental_page_table_init (struct supplemental_page_table *spt);
+void supplemental_page_table_init (struct supplemental_page_table *spt); // 
 bool supplemental_page_table_copy (struct supplemental_page_table *dst,
 		struct supplemental_page_table *src);
 void supplemental_page_table_kill (struct supplemental_page_table *spt);
@@ -108,5 +117,11 @@ bool vm_alloc_page_with_initializer (enum vm_type type, void *upage,
 void vm_dealloc_page (struct page *page);
 bool vm_claim_page (void *va);
 enum vm_type page_get_type (struct page *page);
+
+
+// struct list swap_table;
+struct list frame_table;
+// struct lock swap_table_lock;
+// struct lock frame_table_lock;
 
 #endif  /* VM_VM_H */

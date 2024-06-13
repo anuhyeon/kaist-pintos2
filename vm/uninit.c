@@ -30,7 +30,7 @@ uninit_new (struct page *page, void *va, vm_initializer *init,
 	ASSERT (page != NULL);
 
 	*page = (struct page) {
-		.operations = &uninit_ops,
+		.operations = &uninit_ops, // 아래 코드들이 다 UNINIT 구조체 내부로 바뀜
 		.va = va,
 		.frame = NULL, /* no frame for now */
 		.uninit = (struct uninit_page) {
@@ -42,16 +42,24 @@ uninit_new (struct page *page, void *va, vm_initializer *init,
 	};
 }
 
-/* Initalize the page on first fault */
+/* Initalize the page on first fault 
+  아래 함수는 페이지 폴트가 처음 발생했을 때, 초기화되지 않은 페이지를 초기화하는 역할을 함.
+*/
 static bool
 uninit_initialize (struct page *page, void *kva) {
-	struct uninit_page *uninit = &page->uninit;
+	struct uninit_page *uninit = &page->uninit; // uninit_page 구조체를 통해 페이지 정보에 접근
 
 	/* Fetch first, page_initialize may overwrite the values */
+	 /* 초기화 함수와 추가 데이터를 가져옴. 이 값들은 페이지 초기화에 사용될 수 있음.
+       페이지 초기화 함수가 이 값들을 덮어쓸 수 있기 때문에, 먼저 값을 복사해둠. */
 	vm_initializer *init = uninit->init;
 	void *aux = uninit->aux;
 
 	/* TODO: You may need to fix this function. */
+	/* 페이지 초기화를 수행합니다. uninit->page_initializer 함수는 페이지 타입과 가상 주소를
+       기반으로 페이지를 물리적 메모리에 초기화합니다. 이 함수는 초기화 성공 여부를 bool로 반환합니다.
+       그리고 init 함수가 존재할 경우, 이 함수도 호출하여 추가적인 사용자 정의 초기화를 수행합니다.
+       init 함수가 없다면 true를 반환하여 초기화가 성공적이라고 간주합니다. */
 	return uninit->page_initializer (page, uninit->type, kva) &&
 		(init ? init (page, aux) : true);
 }

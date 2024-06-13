@@ -5,6 +5,8 @@ struct page;
 enum vm_type;
 
 struct anon_page {
+    /*------------project 3 vm-----------*/
+    struct page anon_p;
 };
 
 void vm_anon_init (void);

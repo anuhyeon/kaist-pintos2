@@ -26,10 +26,10 @@
 #define pg_no(va) ((uint64_t) (va) >> PGBITS)
 
 /* Round up to nearest page boundary. */
-#define pg_round_up(va) ((void *) (((uint64_t) (va) + PGSIZE - 1) & ~PGMASK))
+#define pg_round_up(va) ((void *) (((uint64_t) (va) + PGSIZE - 1) & ~PGMASK)) // va를 페이지 경계에 가장 가까운 상위 페이지 경계로 올림(round up)한 값을 반환하는 함수
 
 /* Round down to nearest page boundary. */
-#define pg_round_down(va) (void *) ((uint64_t) (va) & ~PGMASK)
+#define pg_round_down(va) (void *) ((uint64_t) (va) & ~PGMASK)  // va가 속한 페이지의 시작 위치, 즉 페이지 오프셋이 0인 가상 페이지의 시작 주소를 반환하는 함수
 
 /* Kernel virtual address start */
 #define KERN_BASE LOADER_KERN_BASE

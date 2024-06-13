@@ -291,9 +291,13 @@ pml4_set_dirty (uint64_t *pml4, const void *vpage, bool dirty) {
 /* Returns true if the PTE for virtual page VPAGE in PML4 has been
  * accessed recently, that is, between the time the PTE was
  * installed and the last time it was cleared.  Returns false if
- * PML4 contains no PTE for VPAGE. */
+ * PML4 contains no PTE for VPAGE. 
+ * pml4_is_accessed()함수는 가상 메모리 페이지가 최근에 접근되었는지 여부를 확인하는 함수이다.
+ * 이 함수는 특정 가상 페이지(VPAGE)에 대한 페이지 테이블 엔트리(PTE)가 최근에 접근되었는지 확인하고, 
+ * 접근되었다면 true를 아니면 false를 반환.
+ * */
 bool
-pml4_is_accessed (uint64_t *pml4, const void *vpage) {
+pml4_is_accessed (uint64_t *pml4, const void *vpage) { // pml4는 4단계 페이지 맵 레벨4(pml4)의 주소를 가리키는 포인터임. -> 최상위 페이지 디렉토리 주소이다.
 	uint64_t *pte = pml4e_walk (pml4, (uint64_t) vpage, false);
 	return pte != NULL && (*pte & PTE_A) != 0;
 }

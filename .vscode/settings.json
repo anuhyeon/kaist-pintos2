@@ -1,0 +1,22 @@
+{
+    "files.associations": {
+        "thread.h": "c",
+        "inspect.h": "c",
+        "array": "c",
+        "chrono": "c",
+        "istream": "c",
+        "ostream": "c",
+        "ratio": "c",
+        "tuple": "c",
+        "type_traits": "c",
+        "utility": "c",
+        "thread": "c",
+        "filesys.h": "c",
+        "disk.h": "c",
+        "tests.h": "c",
+        "gdt.h": "c",
+        "memory_resource": "c",
+        "page_cache.h": "c",
+        "process.h": "c"
+    }
+}

@@ -20,7 +20,17 @@ static void remove_elem (struct hash *, struct hash_elem *);
 static void rehash (struct hash *);
 
 /* Initializes hash table H to compute hash values using HASH and
-   compare hash elements using LESS, given auxiliary data AUX. */
+   compare hash elements using LESS, given auxiliary data AUX. 
+   여기서 hash_init()은 해시 테이블을 초기화하는 함수이다. 
+   해시 함수 page_hash_func를 이용하여 해시 값을 계산하고 
+   비교 함수 page_less_func를 이용해 해시 테이블 내 요소를 비교하는 테이블을 만든다.
+   spt init() 함수는 페이지 테이블이 처음 만들어질 때 함께 만들어져야 한다. 
+   페이지 테이블은 언제 만들어질까? 
+   1. 처음에 process가 생성될 때 
+   2. fork로 만들어질 때 
+   위 두 가지 경우에 해당한다. 
+   따라서 initd()와 __do_fork()에서 초기화를 추가해준다. (이는 이미 적용되어 있음)
+   */
 bool
 hash_init (struct hash *h,
 		hash_hash_func *hash, hash_less_func *less, void *aux) {
@@ -87,18 +97,22 @@ hash_destroy (struct hash *h, hash_action_func *destructor) {
 /* Inserts NEW into hash table H and returns a null pointer, if
    no equal element is already in the table.
    If an equal element is already in the table, returns it
-   without inserting NEW. */
+   without inserting NEW. 
+   새 요소 NEW를 해시 테이블 H에 삽입하고, 이미 테이블에 동일한 요소가 없다면 NULL 포인터를 반환.
+   만약 테이블에 동일한 요소가 이미 존재한다면, 그 요소를 반환하고 새 요소는 삽입하지 않는다.
+   */
 struct hash_elem *
-hash_insert (struct hash *h, struct hash_elem *new) {
-	struct list *bucket = find_bucket (h, new);
-	struct hash_elem *old = find_elem (h, bucket, new);
+hash_insert (struct hash *h, struct hash_elem *new) { // 해시테이블에 새로운 요소를 삽입하는 기능을 수행하는 함수-> 해시테이블 h에 새로운 요소 new를 추가하려고함.
+	 // 새 요소 'new'를 넣을 버킷을 찾음 
+	struct list *bucket = find_bucket (h, new); // new의 해시 값을 사용해서 넣을 버킷을 찾음
+	struct hash_elem *old = find_elem (h, bucket, new); // 버킷안에 연결되어있는 요소들을 다 탐색하여 new랑 같은 요소가 있는지 확인 탐해당 버킷안에 new랑 같은 동일한 요소가 있는지 확인 
 
-	if (old == NULL)
-		insert_elem (h, bucket, new);
+	if (old == NULL)  // new랑 같은 요소가 없으면 new를 삽입
+		insert_elem (h, bucket, new); // 해당 버킷에 new라는 요소를 삽입
 
-	rehash (h);
+	rehash (h); // 필요에 따라 재해싱을 수행하여 해시테이블 성능 유지
 
-	return old;
+	return old; // 삽입을 방해하는 기존 요소를 반환하거나, 'new'가 삽입된 경우 NULL을 반환
 }
 
 /* Inserts NEW into hash table H, replacing any equal element
@@ -121,7 +135,7 @@ hash_replace (struct hash *h, struct hash_elem *new) {
    null pointer if no equal element exists in the table. */
 struct hash_elem *
 hash_find (struct hash *h, struct hash_elem *e) {
-	return find_elem (h, find_bucket (h, e), e);
+	return find_elem (h, find_bucket (h, e), e); // e라는 요소를 통해 해시값을 구하여 해당 인덱스를 가진 버킷을 찾아 해당 버킷에서 e와 동일한 요소를 찾음 찾으면 해당 요소를 반환, 찾지 못하면 NULL을 반환
 }
 
 /* Finds, removes, and returns an element equal to E in hash
@@ -130,15 +144,22 @@ hash_find (struct hash *h, struct hash_elem *e) {
 
    If the elements of the hash table are dynamically allocated,
    or own resources that are, then it is the caller's
-   responsibility to deallocate them. */
+   responsibility to deallocate them. 
+   
+   해시 테이블 H에서 E와 동등한 요소를 찾아 제거하고 반환한다.
+   동등한 요소가 테이블에 없다면 NULL 포인터를 반환힌다.
+
+   해시 테이블의 요소들이 동적으로 할당되었거나, 관련 자원을 소유하고 있다면,
+   이 요소들을 해제하는 책임은 호출자에게 있다..
+   */
 struct hash_elem *
-hash_delete (struct hash *h, struct hash_elem *e) {
-	struct hash_elem *found = find_elem (h, find_bucket (h, e), e);
-	if (found != NULL) {
-		remove_elem (h, found);
-		rehash (h);
+hash_delete (struct hash *h, struct hash_elem *e) { // 인자로 받은 e라는 요소를 찾아 해시테이블에서 제거하는 함수
+	struct hash_elem *found = find_elem (h, find_bucket (h, e), e); // e라는 요소를 찾기 위해 해당 요소가 위치할 버킷을 찾고, 그 안에서 요소를 검색.  find_bucket()함수는 요소의 해시 값을 가지고 해시테이블 인덱스를 구하여 버킷을 찾는 것.
+	if (found != NULL) { // 요소가 해시테이블에 존재 하면
+		remove_elem (h, found); // 해당 요소를 해시테이블에서 제거
+		rehash (h); // 재해싱
 	}
-	return found;
+	return found; // 제거된 요소를 반환하거나, 요소가 없었으면 NULL을 반환(해시테이블 안에 삭제할 요소가 존재하지 않았다면 NULL을 반환)
 }
 
 /* Calls ACTION for each element in hash table H in arbitrary
@@ -241,8 +262,8 @@ hash_empty (struct hash *h) {
 
 /* Returns a hash of the SIZE bytes in BUF. */
 uint64_t
-hash_bytes (const void *buf_, size_t size) {
-	/* Fowler-Noll-Vo 32-bit hash, for bytes. */
+hash_bytes (const void *buf_, size_t size) { //hash_bytes()함수는 해시 함수를 이용해 buf 메모리 공간에 있는 정수를 size 만큼 암호화 시킨후 해당 암호화된 해시값(해시값 % 버킷 수 =해시테이블 인덱스 값)을 반환
+	/* Fowler-Noll-Vo 32-bit hash, for bytes. Fowler-Noll-Vo (FNV) 해시 알고리즘의 변형 */
 	const unsigned char *buf = buf_;
 	uint64_t hash;
 
@@ -276,25 +297,30 @@ hash_int (int i) {
 	return hash_bytes (&i, sizeof i);
 }
 
-/* Returns the bucket in H that E belongs in. */
+/* Returns the bucket in H that E belongs in. H 해시 테이블에서 E 해시 요소가 속해야 할 버킷을 반환*/
 static struct list *
 find_bucket (struct hash *h, struct hash_elem *e) {
-	size_t bucket_idx = h->hash (e, h->aux) & (h->bucket_cnt - 1);
-	return &h->buckets[bucket_idx];
+	size_t bucket_idx = h->hash (e, h->aux) & (h->bucket_cnt - 1); // 요소 E에 대한 해시 값을 계산하고, 해시 테이블 H의 버킷 수에 따라 인덱스를 정규화
+	return &h->buckets[bucket_idx]; // 계산된 인덱스에 해당하는 버킷의 주소를 반환
 }
 
 /* Searches BUCKET in H for a hash element equal to E.  Returns
-   it if found or a null pointer otherwise. */
+   it if found or a null pointer otherwise.
+   H의 BUCKET에서 E와 동등한 해시 요소를 검색한다. 
+   찾은 경우 해당 요소를 반환하고, 찾지 못한 경우 NULL 포인터를 반환
+    */
 static struct hash_elem *
 find_elem (struct hash *h, struct list *bucket, struct hash_elem *e) {
-	struct list_elem *i;
-
+	struct list_elem *i; // // 리스트를 순회하기 위한 반복자
+	// 버킷의 시작부터 끝까지 순회
 	for (i = list_begin (bucket); i != list_end (bucket); i = list_next (i)) {
-		struct hash_elem *hi = list_elem_to_hash_elem (i);
-		if (!h->less (hi, e, h->aux) && !h->less (e, hi, h->aux))
-			return hi;
+		struct hash_elem *hi = list_elem_to_hash_elem (i); // 리스트 요소를 해시 요소로 변환
+		// h->less 함수를 사용하여 E와 hi가 동일한지 검사.
+		// 두 요소가 서로에게 'less'가 아닌 경우 동등함을 의미.
+		if (!h->less (hi, e, h->aux) && !h->less (e, hi, h->aux)) // e랑 hi가 동일하면
+			return hi; // 해당 hash_elem을 반환
 	}
-	return NULL;
+	return NULL; // 동일한 요소를 찾지 못하면 NULL 반환
 }
 
 /* Returns X with its lowest-order bit set to 1 turned off. */
